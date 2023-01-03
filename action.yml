@@ -1,0 +1,30 @@
+name: Setup Go environment for OvrC device server
+description: Setup a Go environment with the http server Host validation check removed.  Some older OvrC enabled devices will send invalid characters in the host.
+inputs:
+  go-version-download-url:
+    description: The url used to download Go version source
+    required: true
+runs:
+  using: composite
+  steps:
+    # Download Go
+    - run: curl --silent ${{ inputs.go-version-download-url }} | tar -xz  -C $GITHUB_WORKSPACE
+      shell: bash
+
+    # Disable http server Host validation
+    - run: sed -i '/if len(hosts).*==.*1.*&&.*!httpguts.ValidHostHeader(hosts\[0\]).*{/,/.*}$/d' $GITHUB_WORKSPACE/go/src/net/http/server.go
+      shell: bash
+
+    # Set GOROOT environment
+    - run: echo "GOROOT=$GITHUB_WORKSPACE/go" >> $GITHUB_ENV
+      shell: bash
+
+    # Add GOROOT/bin to path
+    - run: echo "$GOROOT/bin" >> $GITHUB_PATH
+      shell: bash
+
+    # Run test to make sure Go modification was done correctly
+    - run: |
+        cd $GITHUB_ACTION_PATH/httpHostDisabled
+        go test -v ./...
+      shell: bash
